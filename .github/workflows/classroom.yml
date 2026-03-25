@@ -1,0 +1,90 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Fix Lỗi Build & Cú pháp
+      id: fix-l-i-build-cu-phap
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Fix Lỗi Build & Cú pháp
+        setup-command: ''
+        command: dotnet build src/API
+        timeout: 2
+        max-score: 2
+    - name: Khởi chạy UI & Cấu hình DB
+      id: kh-i-ch-y-ui-c-u-hinh-db
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Khởi chạy UI & Cấu hình DB
+        setup-command: ''
+        command: dotnet test src/Tests --filter "DisplayName~Môi trường"
+        timeout: 2
+        max-score: 2
+    - name: Đăng ký thành công
+      id: dang-ky-thanh-cong
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Đăng ký thành công
+        setup-command: ''
+        command: dotnet test src/Tests --filter "Test_Register_Success"
+        timeout: 2
+        max-score: 1
+    - name: Bắt lỗi trùng Username
+      id: b-t-l-i-trung-username
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Bắt lỗi trùng Username
+        setup-command: ''
+        command: dotnet test src/Tests --filter "Test_Register_Duplicate_ReturnsBadRequest"
+        timeout: 2
+        max-score: 1
+    - name: Chặn đăng nhập sai mật khẩu
+      id: ch-n-dang-nh-p-sai-m-t-kh-u
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Chặn đăng nhập sai mật khẩu
+        setup-command: ''
+        command: dotnet test src/Tests --filter "Test_Login_WrongPass_ReturnsUnauthorized"
+        timeout: 2
+        max-score: 1
+    - name: Băm mật khẩu xuống Database
+      id: bam-m-t-kh-u-xu-ng-database
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Băm mật khẩu xuống Database
+        setup-command: ''
+        command: dotnet test src/Tests --filter "Test_Password_MustBeHashed_InDatabase"
+        timeout: 2
+        max-score: 1
+    - name: Trả về JWT Token hợp lệ
+      id: tr-v-jwt-token-h-p-l
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Trả về JWT Token hợp lệ
+        setup-command: ''
+        command: dotnet test src/Tests --filter "Test_Login_Returns_Valid_JWT"
+        timeout: 2
+        max-score: 2
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        FIX-L-I-BUILD-CU-PHAP_RESULTS: "${{steps.fix-l-i-build-cu-phap.outputs.result}}"
+        KH-I-CH-Y-UI-C-U-HINH-DB_RESULTS: "${{steps.kh-i-ch-y-ui-c-u-hinh-db.outputs.result}}"
+        DANG-KY-THANH-CONG_RESULTS: "${{steps.dang-ky-thanh-cong.outputs.result}}"
+        B-T-L-I-TRUNG-USERNAME_RESULTS: "${{steps.b-t-l-i-trung-username.outputs.result}}"
+        CH-N-DANG-NH-P-SAI-M-T-KH-U_RESULTS: "${{steps.ch-n-dang-nh-p-sai-m-t-kh-u.outputs.result}}"
+        BAM-M-T-KH-U-XU-NG-DATABASE_RESULTS: "${{steps.bam-m-t-kh-u-xu-ng-database.outputs.result}}"
+        TR-V-JWT-TOKEN-H-P-L_RESULTS: "${{steps.tr-v-jwt-token-h-p-l.outputs.result}}"
+      with:
+        runners: fix-l-i-build-cu-phap,kh-i-ch-y-ui-c-u-hinh-db,dang-ky-thanh-cong,b-t-l-i-trung-username,ch-n-dang-nh-p-sai-m-t-kh-u,bam-m-t-kh-u-xu-ng-database,tr-v-jwt-token-h-p-l
