@@ -25,7 +25,7 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto request)
         {
-            // 1. (1.5đ) Bắt lỗi trùng Username - Trả về 400 BadRequest
+            // 1. (1.5đ) Bắt lỗi trùng Username - Trả về 400 Bad Request
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return BadRequest("Username đã tồn tại.");
 
@@ -35,7 +35,7 @@ namespace API.Controllers
             var user = new User 
             {
                 Username = request.Username,
-                PasswordHash = passwordHash, // Lưu dạng Hash
+                PasswordHash = passwordHash,
                 Email = string.Empty
             };
 
@@ -50,12 +50,12 @@ namespace API.Controllers
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // 3. (1.0đ) Bảo mật Đăng nhập - So sánh Hash (Verify)
-            // Nếu sai pass hoặc không thấy user thì return 401 Unauthorized
+            // 3. (1.0đ) Bảo mật Đăng nhập - So sánh bằng Verify Hash
+            // Nếu sai pass hoặc không thấy user, return 401 Unauthorized
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized("Sai tên đăng nhập hoặc mật khẩu.");
 
-            // 4. (2.0đ) Trả về JWT Token thật
+            // 4. (2.0đ) Trả về JWT Token hợp lệ
             var token = CreateToken(user);
             return Ok(new { token = token });
         }
@@ -68,9 +68,9 @@ namespace API.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
-            // Lấy Key bảo mật từ cấu hình
+            // Lấy Secret Key từ AppSettings (phải dài >= 32 ký tự)
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                _configuration["AppSettings:Token"] ?? "Secret_Key_Sieu_Bao_Mat_Min_32_Chars_2026"));
+                _configuration["AppSettings:Token"] ?? "Chuoi_Bi_Mat_Sieu_Cap_Vip_Pro_12345678"));
             
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256Signature);
 
