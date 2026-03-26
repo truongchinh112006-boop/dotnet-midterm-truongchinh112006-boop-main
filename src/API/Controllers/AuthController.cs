@@ -25,21 +25,20 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto request)
         {
-            // 1. Kiểm tra trùng Username (1.5đ)
+            // 1. (1.5đ) Bắt lỗi trùng Username - Trả về 400 BadRequest
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return BadRequest("Username đã tồn tại.");
 
-            // 2. Hash mật khẩu bằng BCrypt (1.5đ)
+            // 2. (1.5đ) Mã hóa mật khẩu bằng BCrypt trước khi lưu
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User 
             {
                 Username = request.Username,
-                PasswordHash = passwordHash,
+                PasswordHash = passwordHash, // Lưu dạng Hash
                 Email = string.Empty
             };
 
-            // 3. Lưu vào Database (1.0đ)
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
             
@@ -51,11 +50,12 @@ namespace API.Controllers
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // 4. Bảo mật đăng nhập - So sánh Hash (1.0đ)
+            // 3. (1.0đ) Bảo mật Đăng nhập - So sánh Hash (Verify)
+            // Nếu sai pass hoặc không thấy user thì return 401 Unauthorized
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized("Sai tên đăng nhập hoặc mật khẩu.");
 
-            // 5. Trả về JWT Token thật (2.0đ)
+            // 4. (2.0đ) Trả về JWT Token thật
             var token = CreateToken(user);
             return Ok(new { token = token });
         }
@@ -68,7 +68,7 @@ namespace API.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
-            // Lấy Key từ AppSettings hoặc dùng mặc định để tránh lỗi
+            // Lấy Key bảo mật từ cấu hình
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                 _configuration["AppSettings:Token"] ?? "Secret_Key_Sieu_Bao_Mat_Min_32_Chars_2026"));
             
@@ -87,6 +87,7 @@ namespace API.Controllers
             return tokenHandler.WriteToken(token);
         }
     }
+
     public record RegisterDto(string Username, string Password);
     public record LoginDto(string Username, string Password);
 }
