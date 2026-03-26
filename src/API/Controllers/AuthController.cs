@@ -15,7 +15,6 @@ namespace API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
-
         public AuthController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
