@@ -4,10 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Infrastructure.Data; // 1.5đ - Kết nối đến AppDbContext
+using Infrastructure.Data; 
 using Core.Entities;
-namespace API.Controllers
 
+namespace API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -15,6 +15,7 @@ namespace API.Controllers
     {
         private readonly AppDbContext _context;
         private readonly IConfiguration _configuration;
+
         public AuthController(AppDbContext context, IConfiguration configuration)
         {
             _context = context;
@@ -24,11 +25,11 @@ namespace API.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto request)
         {
-            // Mục 4: Kiểm tra trùng Username (1.5đ)
+            // 1. Kiểm tra trùng Username (1.5đ)
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 return BadRequest("Username đã tồn tại.");
 
-            // Mục 5: Hash mật khẩu (1.5đ)
+            // 2. Hash mật khẩu bằng BCrypt (1.5đ)
             string passwordHash = BCrypt.Net.BCrypt.HashPassword(request.Password);
 
             var user = new User 
@@ -38,8 +39,10 @@ namespace API.Controllers
                 Email = string.Empty
             };
 
+            // 3. Lưu vào Database (1.0đ)
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
+            
             return Ok(new { message = "Đăng ký thành công!" });
         }
 
@@ -48,11 +51,11 @@ namespace API.Controllers
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
 
-            // Mục 6: Bảo mật đăng nhập - So sánh Hash (1.0đ)
+            // 4. Bảo mật đăng nhập - So sánh Hash (1.0đ)
             if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
                 return Unauthorized("Sai tên đăng nhập hoặc mật khẩu.");
 
-            // Mục 7: Trả về JWT Token thật (2.0đ)
+            // 5. Trả về JWT Token thật (2.0đ)
             var token = CreateToken(user);
             return Ok(new { token = token });
         }
@@ -65,6 +68,7 @@ namespace API.Controllers
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
+            // Lấy Key từ AppSettings hoặc dùng mặc định để tránh lỗi
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
                 _configuration["AppSettings:Token"] ?? "Secret_Key_Sieu_Bao_Mat_Min_32_Chars_2026"));
             
@@ -78,7 +82,9 @@ namespace API.Controllers
             };
 
             var tokenHandler = new JwtSecurityTokenHandler();
-            return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return tokenHandler.WriteToken(token);
         }
     }
 
